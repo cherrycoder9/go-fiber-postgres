@@ -152,5 +152,22 @@ func main() {
 
 	app := fiber.New()
 	r.SetupRoutes(app)
-	app.Listen(":8081")
+
+	// HTTP 요청을 HTTPS로 리디렉션하는 서버 실행
+	go func() {
+		httpApp := fiber.New()
+		httpApp.Use(func(c *fiber.Ctx) error {
+			return c.Redirect("https://" + string(c.Context().Host()) + c.OriginalURL(), http.StatusMovedPermanently)
+		})
+		log.Fatal(httpApp.Listen(":80"))
+	}()
+
+	// TLS 적용
+	certFile := "server.cert" // OpenSSL로 생성한 인증서 파일
+	keyFile := "server.key" // OpenSSL로 생성한 키 파일 
+
+	err = app.ListenTLS(":443", certFile, keyFile)
+	if err != nil {
+		log.Fatal("서버 시작 불가: ", err)
+	}
 }
